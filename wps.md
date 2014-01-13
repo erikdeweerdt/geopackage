@@ -5,6 +5,7 @@ GeoPackage WPS
 
 * [NodeJS](http://nodejs.org/download/)
 * [Grunt](http://gruntjs.com/getting-started)
+* [libgpkg](https://bitbucket.org/luciad/libgpkg/src) - installed as a system library in /usr/local/lib
 
 Then execute
 

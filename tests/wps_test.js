@@ -1,6 +1,8 @@
-'use strict';
+"use strict";
 
-var wps = require('../src/wps.js');
+var wps = require("../src/wps.js");
+var fs = require("fs");
+var OpenLayers = require('openlayers').OpenLayers;
 
 /*
   ======== A Handy Little Nodeunit Reference ========
@@ -36,11 +38,23 @@ module.exports = {
     test.equal(typeof cap, "string");
     test.done();
   },
+
   testDescribeProcess: function(test) {
     var desc = wps.describeProcess();
     test.equal(typeof desc, "string");
     test.done();
   },
+
+  testExecuteProcess: function(test) {
+    var features = [];
+    var ex = [];
+    var data = fs.readFileSync("samples/execute.xml", "utf8")
+    var features = wps.parseReqBody(ex, data); 
+    test.equal(ex.length, 0);
+    test.equal(features.length, 3, "Unable to parse features");
+    test.done();
+  },
+
   testErrorMsg: function(test){
     var errMsg = wps.getError({
       exceptions: [{
