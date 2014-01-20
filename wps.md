@@ -5,7 +5,9 @@ GeoPackage WPS
 
 * [NodeJS](http://nodejs.org/download/)
 * [Grunt](http://gruntjs.com/getting-started)
-* [libgpkg](https://bitbucket.org/luciad/libgpkg/src) - installed as a system library in /usr/local/lib
+* [libgpkg](https://bitbucket.org/luciad/libgpkg/src) 
+	- installed as a system library in /usr/local/lib and the shared library linked 'libgpkg.ext' in /usr/local/lib 
+	  e.g. on a Mac `ln -s libgpkg.dylib libgpkg.sqlext`
 
 Then execute
 
@@ -20,7 +22,7 @@ Execute from the root directory
 
 `curl "http://localhost:1337/wps?request=getcapabilities&version=1.0.0&service=wps"`
 `curl "http://localhost:1337/wps?request=describeprocess&version=1.0.0&service=wps"`
-`curl -d @samples/execute.xml http://localhost:1337/wps`
+`curl -d @samples/execute.xml http://localhost:1337/wps > my.gpkg`
 
 
 

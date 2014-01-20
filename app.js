@@ -1,4 +1,5 @@
 var express = require("express");
+var fs = require("fs");
 var wps =  require("./src/wps");
 var app = express();
 
@@ -71,16 +72,27 @@ app.post('/wps', function(request, response) {
    var body = request.body;
    var ex = [];
    var features = wps.parseReqBody(ex, body);
-   console.log(JSON.stringify(features));
+
    if (ex.length == 0)
    {
-		// not implemented yet
- 		response.send(500, wps.getError({
-  			exceptions: [{
-  				exceptionCode: "NoApplicableCode"
-  		}]
-  		}));
-  	}
+		var dbPath = wps.execute(features, function(err)
+			{
+				response.contentType("xml");
+				response.send(400, wps.getError({
+				  	exceptions: [{
+				  		exceptionCode: "NoApplicableCode"
+				  	}]
+				  }));
+			},
+			function(dbFile)
+			{
+				// stream result and then clean up the file
+				response.setHeader("content-type", "application/vnd.ogc.gpkg");
+    			fs.createReadStream(dbFile).pipe(response);
+    			fs.unlink(dbFile);
+			}
+		);
+	}
   	else
   	{
   		response.contentType("xml");

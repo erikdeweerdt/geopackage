@@ -3,6 +3,7 @@ var fs = require("fs");
 var DOMParser = require("xmldom").DOMParser;
 var OpenLayers = require("openlayers").OpenLayers;
 var GeoPackage = require("../src/GeoPackage");
+var tmp = require('tmp');
 
 var capTemplate = jade.compile(fs.readFileSync("src/wpsCapabilities.jade", "utf8"));
 var descTemplate = jade.compile(fs.readFileSync("src/wpsDescribeProcess.jade", "utf8"));
@@ -113,9 +114,22 @@ module.exports = {
 		return res;
 	},
 
-	execute : function(req) {
-		// if shapefile dump into sqlite
-		var db = new sqlite.Database(':memory:');
+	execute : function(features, err, res) {
+		tmp.tmpName({postfix: ".db"}, function _tempNameGenerated(e, path) {
+			if (e) err(e);
+
+			var gpkg;
+			gpkg = new GeoPackage(path);
+			gpkg.load(features, function onerror(e) 
+				{
+					err(e);
+				},
+				function onload(result)
+				{
+					res(path);
+				});
+			}
+		);
 	}
 
 };

@@ -52,7 +52,19 @@ module.exports = {
     var features = wps.parseReqBody(ex, data); 
     test.equal(ex.length, 0);
     test.equal(features.length, 3, "Unable to parse features");
-    test.done();
+
+    wps.execute(features, 
+      function(err) {
+        // no error
+        test.equal(undefined, err);
+        test.done();
+      },
+      function(dbFile) {
+        test.equal("string", typeof dbFile);
+        fs.unlink(dbFile);
+        test.done();
+      } 
+    );
   },
 
   testErrorMsg: function(test){
