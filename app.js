@@ -88,8 +88,8 @@ app.post('/wps', function(request, response) {
 			{
 				// stream result and then clean up the file
 				response.setHeader("content-type", "application/vnd.ogc.gpkg");
-    			fs.createReadStream(dbFile).pipe(response);
-    			fs.unlink(dbFile);
+				fs.createReadStream(dbFile).pipe(response);
+				fs.unlink(dbFile);
 			}
 		);
 	}
