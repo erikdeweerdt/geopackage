@@ -34,10 +34,11 @@ GeoPackage.prototype.geoJsonFeatureToWKT = function geoJsonFeatureToWKT(str)
 	return out;
 };
 
-GeoPackage.prototype.createTable = function createTable(db, name, cols, geomType, err)
+GeoPackage.prototype.createTable = function createTable( name, cols, geomType, err)
 {
 	// create the table based on the feature properties
 	var sql = "CREATE TABLE " + name + " (";
+	var db = this.db;
 
 	for (var i = 0; i < cols.length; i++) {
 		var col = cols[i];
@@ -69,10 +70,12 @@ GeoPackage.prototype.createTable = function createTable(db, name, cols, geomType
 	});	
 }
 
-GeoPackage.prototype.insertRow = function insertRow(db, tableName, values, err)
+GeoPackage.prototype.insertRow = function insertRow(tableName, values, err)
 {
 	// db prepared statements are not running correctly here so use a string and an insert
 	var str = "";
+	var db = this.db;
+
 	for (var i = 0; i < values.length; i++)
 	{
 		var v = values[i];
@@ -84,18 +87,30 @@ GeoPackage.prototype.insertRow = function insertRow(db, tableName, values, err)
 	}
 
 	var sql = "INSERT INTO " + tableName + " VALUES(" + str.substring(0, str.length - 1) + ")";
-	console.log(sql);
+
 	db.serialize(function() { 
 		db.run(sql);
 	});
 }
 
-GeoPackage.prototype.dbLoad = function dbLoad(db, gpkg, url, destPath, type, err, cb)
+GeoPackage.prototype.dbLoad = function dbLoad(url, destPath, type, err, cb)
 {
 	var parts = urlparser.parse(url).pathname.split("/");
 	var fname = path.join(destPath, parts[parts.length - 1]);
 	var file = fs.createWriteStream(fname);
-	var insertRow = gpkg.insertRow;
+	var gpkg = this;
+	var db = this.db;
+
+	var createTable = function(name, cols, geomType, err)
+	{
+		gpkg.createTable(name, cols, geomType, err);
+	};
+
+	var insertRow = function(layer, values, err)
+	{
+		gpkg.insertRow(layer, values, err);
+	};
+
 	var request = http.get(url, function(response) {
 		response.pipe(file);
 		file.on("finish", function() {
@@ -132,7 +147,7 @@ GeoPackage.prototype.dbLoad = function dbLoad(db, gpkg, url, destPath, type, err
 											if (feature.properties.hasOwnProperty(col))
 												cols.push(col);
 
-										gpkg.createTable(db, layer, cols, feature.geometry.type, err);
+										gpkg.createTable(layer, cols, feature.geometry.type, err);
 										createdTable = true;
 									}
 
@@ -145,7 +160,7 @@ GeoPackage.prototype.dbLoad = function dbLoad(db, gpkg, url, destPath, type, err
 											values.push(feature.properties[prop]);
 
 									values.push("st_geomfromtext('" + wkt + "')");
-									gpkg.insertRow(db, layer, values, err);
+									gpkg.insertRow(layer, values, err);
 								})
 								.on("error", err)
 								.on("end", function() {
@@ -171,8 +186,11 @@ GeoPackage.prototype.load = function load(features, error, res)
 {
 	// load extension and initialize geopackage
 	var db = this.db;
-	var dbLoad = this.dbLoad;
 	var gpkg = this;
+	var dbLoad = function(link, dirpath, type, error, cb) 
+	{
+		gpkg.dbLoad(link, dirpath, type, error, cb);
+	};
 
 	this.db.loadExtension("/usr/local/lib/libgpkg.sqlext", function(e)
 	{
@@ -204,7 +222,6 @@ GeoPackage.prototype.load = function load(features, error, res)
 								if (results.length == features.length)
 								{
 									// close db and stream to the caller
-									console.log("DB CLOSE");
 									db.close(function(e)
 										{
 											if (e)
@@ -216,8 +233,8 @@ GeoPackage.prototype.load = function load(features, error, res)
 							};
 						
 							tmp.dir(function _tempDirCreated(e, dirpath) {
-								if (e) err(e);
-								dbLoad(db, gpkg, link, dirpath, type, function(e){ error(e);}, cb);
+								if (e) error(e);
+								dbLoad(link, dirpath, type, function(e){ error(e);}, cb);
 							});
 						});
 					}
