@@ -45,7 +45,7 @@ module.exports = {
 		var domParser = new DOMParser();
 		var xmlFormat = new OpenLayers.Format.XML();
 		var doc = new DOMParser().parseFromString(xml, "text/xml");
-		var res = null;
+		var resp = null;
 		
 		// extract the RSS Context by jumping to the complex data in the put section
 		var rss = xmlFormat.getElementsByTagNameNS(doc, wpsNS, "ComplexData");
@@ -61,7 +61,7 @@ module.exports = {
 					var rssFormat = new OpenLayers.Format.GeoRSS(
 					{
 						// don't care about namespaces for now
-						// TODO this is a 'feature' in XMLDom and OpenLayers
+						// TODO this is a 'feature' in XMLDom and OpenLayers GeoRSS parser
 						getElementsByTagNameNS : function(node, uri, name)
 						{
 							return  node.getElementsByTagName(name);
@@ -69,7 +69,7 @@ module.exports = {
 
 						createFeatureFromItem : function(item)
 						{
-							var feature = OpenLayers.Format.GeoRSS.prototype.createFeatureFromItem.apply(this, arguments);
+							var entry = OpenLayers.Format.GeoRSS.prototype.createFeatureFromItem.apply(this, arguments);
 
 							// get owc:offering/owc:content
 							var child = item.firstChild;
@@ -82,11 +82,25 @@ module.exports = {
 									{
 										if (c2.localName == "content")
 										{
-											feature.owcLink = {
+											entry.owcLink = {
 												"link" : c2.getAttribute("href"),
 												"type" : c2.getAttribute("type")
 											};
 											break;
+										}
+										else if (c2.localName == "operation")
+										{
+											// wfs / wms
+											var obj = {
+												"link" : c2.getAttribute("href"),
+												"type" : c2.getAttribute("code"),
+												"method" : c2.getAttribute("method")
+											};
+
+											if (entry.owcLink)
+												entry.owcLink.push(obj);
+											else
+												entry.owcLink = [obj];
 										}
 										c2 = c2.nextSibling;
 									}
@@ -94,33 +108,32 @@ module.exports = {
 								}
 								child = child.nextSibling;
 							}
-							return feature;
+							return entry;
 						}
 					});
 
-					res= rssFormat.read(rssDoc)
+					resp = {ctx: rssDoc, entries: rssFormat.read(rssDoc)}
 					break;
 				}
 				child = child.nextSibling;
 			}
 		}
 
-		if (res == null)
+		if (resp == null)
 		{
 			ex.push({
 				exceptionCode: "NoApplicableCode"
 			});
 		}
-		return res;
+		return resp;
 	},
 
-	execute : function(features, err, res) {
+	execute : function(ctx, entries, err, res) {
 		tmp.tmpName({postfix: ".db"}, function _tempNameGenerated(e, path) {
 			if (e) err(e);
 
-			var gpkg;
-			gpkg = new GeoPackage(path);
-			gpkg.load(features, function onerror(e) 
+			var gpkg= new GeoPackage(path);;
+			gpkg.load(ctx, entries, function onerror(e) 
 				{
 					err(e);
 				},

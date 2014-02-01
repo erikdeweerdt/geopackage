@@ -71,11 +71,11 @@ app.get('/wps', function(request, response) {
 app.post('/wps', function(request, response) {
    var body = request.body;
    var ex = [];
-   var features = wps.parseReqBody(ex, body);
+   var resp = wps.parseReqBody(ex, body);
 
    if (ex.length == 0)
    {
-		var dbPath = wps.execute(features, function(err)
+		var dbPath = wps.execute(resp.ctx, resp.entries, function(err)
 			{
 				response.contentType("xml");
 				response.send(400, wps.getError({
