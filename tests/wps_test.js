@@ -46,7 +46,6 @@ module.exports = {
   },
 
   testExecuteProcess: function(test) {
-    var features = [];
     var ex = [];
     var data = fs.readFileSync("samples/execute.xml", "utf8")
     var resp = wps.parseReqBody(ex, data); 
@@ -68,13 +67,34 @@ module.exports = {
   },
 
   testExecuteWFSProcess: function(test){
-    var features = [];
     var ex = [];
     var data = fs.readFileSync("samples/wfs_execute.xml", "utf8")
     var resp = wps.parseReqBody(ex, data); 
 
     test.equal(ex.length, 0);
-    test.equal(resp.entries.length, 1, "Unable to parse features");
+    test.equal(resp.entries.length, 1, "Unable to parse entries");
+
+    wps.execute(resp.ctx, resp.entries, 
+      function(err) {
+        // no error
+        test.equal(undefined, err);
+        test.done();
+      },
+      function(dbFile) {
+        test.equal("string", typeof dbFile);
+        fs.unlink(dbFile);
+        test.done();
+      } 
+    );    
+  },
+
+  testExecuteGeoRSSProcess: function(test){
+    var ex = [];
+    var data = fs.readFileSync("samples/georss_execute.xml", "utf8")
+    var resp = wps.parseReqBody(ex, data); 
+
+    test.equal(ex.length, 0);
+    test.equal(resp.entries.length, 1, "Unable to parse entries");
 
     wps.execute(resp.ctx, resp.entries, 
       function(err) {

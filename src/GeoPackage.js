@@ -37,7 +37,44 @@ GeoPackage.prototype.geoJsonFeatureToWKT = function geoJsonFeatureToWKT(str)
 	return out;
 };
 
-GeoPackage.prototype.createTable = function createTable( name, cols, geomType, err)
+GeoPackage.prototype.createOLGeoPackage = function createOLGeoPackage(features, name, srsName, err, cb)
+{
+	var wktFormat = new OpenLayers.Format.WKT();
+	var createdTable = false;
+
+	for (var i = 0; i < features.length; i++)
+	{
+		var values = [];
+		var feature = features[i];
+		var wkt = wktFormat.extractGeometry(feature.geometry);
+
+		if (!createdTable)
+		{
+			var cols = [];
+			var geomClassName = feature.geometry.CLASS_NAME;
+			var geomType = geomClassName.substring(geomClassName.lastIndexOf(".") + 1);
+			for (var col in feature.attributes)
+				if (feature.attributes.hasOwnProperty(col))
+					cols.push(col);
+			this.createTable(name, cols, geomType, err);
+			createdTable = true;
+		}
+
+		for (var prop in feature.data)
+			if (feature.data.hasOwnProperty(prop))
+				values.push(escape(feature.data[prop]));
+
+		values.push("st_geomfromtext('" + wkt + "')");
+		this.insertRow(name, values, err);
+	}
+
+	if (createdTable)
+		this.finishTable(name, "features", geomType, srsName, err, cb);
+	else
+		err("Table " + name + " not created");
+};
+
+GeoPackage.prototype.createTable = function createTable(name, cols, geomType, err)
 {
 	// create the table based on the feature properties
 	var sql = "CREATE TABLE " + name + " (";
@@ -134,7 +171,7 @@ GeoPackage.prototype.dbLoad = function dbLoad(owcLink, destPath, err, cb)
 	var gpkg = this;
 	var db = this.db;
 	var type, url, fname, file;
-	var geomType, typeName, typeNamePrefix;
+	var typeName, typeNamePrefix;
 	var srsName = "urn:x-ogc:def:crs:EPSG:4326";
 
 	if (Array.isArray(owcLink))
@@ -201,11 +238,13 @@ GeoPackage.prototype.dbLoad = function dbLoad(owcLink, destPath, err, cb)
 				switch(type)
 				{
 					case "application/x-shapefile":
+						// special case not using OpenLayers parser
 						// file is a zip file 
 						var zip = new AdmZip(fname);
 						zip.extractAllTo(destPath, true);
 						// process files into features and load into db
 						var files = fs.readdirSync(destPath);
+						var geomType;
 
 						// find shapefile and dbf file
 						for (var i = 0; i < files.length; i++)
@@ -245,7 +284,7 @@ GeoPackage.prototype.dbLoad = function dbLoad(owcLink, destPath, err, cb)
 
 										for (var prop in feature.properties)
 											if (feature.properties.hasOwnProperty(prop))
-												values.push(feature.properties[prop]);
+												values.push(escape(feature.properties[prop]));
 
 										values.push("st_geomfromtext('" + wkt + "')");
 										gpkg.insertRow(typeName, values, err);
@@ -278,39 +317,38 @@ GeoPackage.prototype.dbLoad = function dbLoad(owcLink, destPath, err, cb)
 						);
 
 						var features = gmlFormat.read(doc);
-						var wktFormat = new OpenLayers.Format.WKT();
-						var createdTable = false;
-
-						for (var i = 0; i < features.length; i++)
-						{
-							var values = [];
-							var feature = features[i];
-							var wkt = wktFormat.extractGeometry(feature.geometry);
-
-							if (!createdTable)
-							{
-								var cols = [];
-								var geomClassName = feature.geometry.CLASS_NAME;
-								geomType = geomClassName.substring(geomClassName.lastIndexOf(".") + 1);
-								for (var col in feature.attributes)
-									if (feature.attributes.hasOwnProperty(col))
-										cols.push(col);
-
-								gpkg.createTable(typeName, cols, geomType, err);
-								createdTable = true;
-							}
-
-							for (var prop in feature.data)
-								if (feature.data.hasOwnProperty(prop))
-									values.push(feature.data[prop]);
-
-							values.push("st_geomfromtext('" + wkt + "')");
-							gpkg.insertRow(typeName, values, err);
-						}
-
+						gpkg.createOLGeoPackage(features, typeName, srsName, err, cb);
 						rmdir(destPath, function(e){});
-						gpkg.finishTable(typeName, "features", geomType, srsName, err, cb)
 						break;
+					case "application/rss+xml":
+						var doc = new DOMParser().parseFromString(fs.readFileSync(fname, "utf8"));	
+
+						// find srs if set by using xpath
+						var srs = xpath.select("//@srsName", doc);
+
+						if (srs.length > 0)
+							srsName = srs[0].value;
+
+						var rssFormat = new OpenLayers.Format.GeoRSS({
+							// don't care about namespaces except georss for now
+							// TODO this is a 'feature' in XMLDom and OpenLayers GeoRSS parser
+							getElementsByTagNameNS : function(node, uri, name)
+							{
+								if ((uri == this.georssns) ||(uri == this.geons))
+									return node.getElementsByTagNameNS(uri, name);
+								else
+									return node.getElementsByTagName(name);
+							}
+						});
+						var features = rssFormat.read(doc);
+						typeName = path.basename(fname);
+						if (typeName.indexOf(".") != -1)
+							typeName = typeName.substring(0, typeName.indexOf("."));
+
+						gpkg.createOLGeoPackage(features, typeName, srsName, err, cb);
+						rmdir(destPath, function(e){});
+						break;
+
 					default:
 						console.log("Unrecognised type: " + type);
 						err("Unrecognised type: " + type);
