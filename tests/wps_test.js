@@ -99,7 +99,7 @@ module.exports = {
     wps.execute(resp.ctx, resp.entries, function(e, dbFile) {
       if (e) {
         // no error
-        test.equal(undefined, err);
+        test.equal(undefined, e);
         test.done();
       }
       else {

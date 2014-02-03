@@ -169,11 +169,13 @@ GeoPackage.prototype.finishTable =
   }); 
 }
 
-GeoPackage.prototype.dbLoad = function dbLoad(owcLink, destPath, cb) {
+GeoPackage.prototype.dbLoad = function dbLoad(owcLink, cb) {
   var gpkg = this;
   var db = this.db;
-  var type, url, fname, file;
-  var typeName, typeNamePrefix;
+  var type;
+  var url;
+  var typeName;
+  var typeNamePrefix;
   var srsName = 'urn:x-ogc:def:crs:EPSG:4326';
 
   if (Array.isArray(owcLink)) {
@@ -192,10 +194,9 @@ GeoPackage.prototype.dbLoad = function dbLoad(owcLink, destPath, cb) {
               queryData[col.toLowerCase()] = queryData[col];
 
           // short cut to get typename and NS
-          var tmp = queryData.typename.split(':');
-          typeNamePrefix = tmp[0];
-          typeName = tmp[1];
-          fname = path.join(destPath, typeName + '.gml')
+          var s = queryData.typename.split(':');
+          typeNamePrefix = s[0];
+          typeName = s[1];
           break;
         case 'getcapabilities':
           break;
@@ -204,34 +205,35 @@ GeoPackage.prototype.dbLoad = function dbLoad(owcLink, destPath, cb) {
           cb(null);
       }
 
-      if (fname)
+      if (typeName)
         break;
     }
   }
   else {
     type = owcLink.type;
     url = owcLink.link;
-    var parts = urlparser.parse(url).pathname.split('/');
-    fname = path.join(destPath, parts[parts.length - 1]);
   }
 
-  if (fname) {
-    file = fs.createWriteStream(fname);
+  switch(type)
+  {
+    case 'application/x-shapefile':
+      // special case not using OpenLayers parser
+      // file is a zip file 
+      var parts = urlparser.parse(url).pathname.split('/');
 
-    var request = http.get(url, function(response) {
-      response.pipe(file);
-      file.on('finish', function() {
-        file.close();
-        switch(type) {
-          case 'application/x-shapefile':
-            // special case not using OpenLayers parser
-            // file is a zip file 
+      tmp.dir(function _tempDirCreated(e, destPath) {
+        if (e) cb(e);
+        var fname = path.join(destPath, parts[parts.length - 1]);
+        var file = fs.createWriteStream(fname);
+        http.get(url, function(response) {
+          response.pipe(file);
+          file.on('finish', function() {
+            file.close();
             var zip = new AdmZip(fname);
             zip.extractAllTo(destPath, true);
-            // process files into features and load into db
             var files = fs.readdirSync(destPath);
             var geomType;
-
+            // process files into features and load into db
             // find shapefile and dbf file
             for (var i = 0; i < files.length; i++) {
               var shp = files[i];
@@ -239,7 +241,6 @@ GeoPackage.prototype.dbLoad = function dbLoad(owcLink, destPath, cb) {
               {
                 var createdTable = false;
                 typeName= path.basename(shp, '.shp')
-                var stmt;
 
                 shapefile.readStream(path.join(destPath, shp))
                   .on('error', function(e) {cb(e)})
@@ -275,77 +276,87 @@ GeoPackage.prototype.dbLoad = function dbLoad(owcLink, destPath, cb) {
                     values.push('st_geomfromtext("' + wkt + '")');
                     gpkg.insertRow(typeName, values, cb);
                   })
-                  .on('end', function() {
-                    rmdir(destPath, function(e){});
-                    gpkg.finishTable(typeName, 'features', geomType, 
-                      srsName, cb)
-                  });
+                .on('end', function() {
+                  rmdir(destPath, function(e){});
+                  gpkg.finishTable(typeName, 'features', geomType, 
+                    srsName, cb);
+                  rmdir(destPath, function(e){});
+                });
                 break;
               }
             }
-            break;
-          case 'wfs':
-            // only support simple features profile in GML v3
-            // get the feature type and namespace
-            var doc = new DOMParser().parseFromString(
-                          fs.readFileSync(fname, 'utf8'));  
-
-            // find srs if set by using xpath
-            var srs = xpath.select('//@srsName', doc);
-
-            if (srs.length > 0)
-              srsName = srs[0].value;
-
-            var gmlFormat = new OpenLayers.Format.GML.v3({
-                featureType: typeName,
-                featureNS: doc.documentElement.lookupNamespaceURI(typeNamePrefix)
-            });
-
-            var features = gmlFormat.read(doc);
-            gpkg.createOLGeoPackage(features, typeName, srsName, cb);
-            rmdir(destPath, function(e){});
-            break;
-          case 'application/rss+xml':
-            var doc = new DOMParser().parseFromString(
-                        fs.readFileSync(fname, 'utf8'));  
-
-            // find srs if set by using xpath
-            var srs = xpath.select('//@srsName', doc);
-
-            if (srs.length > 0)
-              srsName = srs[0].value;
-
-            var rssFormat = new OpenLayers.Format.GeoRSS({
-              // don't care about namespaces except georss for now
-              // TODO this is a 'feature' in XMLDom and OpenLayers GeoRSS parser
-              getElementsByTagNameNS : function(node, uri, name)
-              {
-                if ((uri == this.georssns) ||(uri == this.geons))
-                  return node.getElementsByTagNameNS(uri, name);
-                else
-                  return node.getElementsByTagName(name);
-              }
-            });
-            var features = rssFormat.read(doc);
-            typeName = path.basename(fname);
-            if (typeName.indexOf('.') != -1)
-              typeName = typeName.substring(0, typeName.indexOf('.'));
-
-            gpkg.createOLGeoPackage(features, typeName, srsName, cb);
-            rmdir(destPath, function(e){});
-            break;
-
-          default:
-            console.log('Unrecognised type: ' + type);
-            err('Unrecognised type: ' + type);
-        }       
+          });
+        });
       });
-    });
-  }
-  else
-  {
-    console.log('Unable to create output file');
-    err('Unable to create output file');
+      break;
+    case 'wfs':
+      // only support simple features profile in GML v3
+      // get the feature type and namespace
+      callback = function(response) {
+        var str = '';
+        response.on('data', function (chunk) {
+          str += chunk;
+        });
+
+        response.on('end', function () {
+          var doc = new DOMParser().parseFromString(str);  
+          // find srs if set by using xpath
+          var srs = xpath.select('//@srsName', doc);
+
+          if (srs.length > 0)
+            srsName = srs[0].value;
+
+          var gmlFormat = new OpenLayers.Format.GML.v3({
+              featureType: typeName,
+              featureNS: doc.documentElement.lookupNamespaceURI(typeNamePrefix)
+          });
+
+          var features = gmlFormat.read(doc);
+          gpkg.createOLGeoPackage(features, typeName, srsName, cb);
+        });
+      }
+
+      http.request(url, callback).end();
+      break;
+    case 'application/rss+xml':
+      callback = function(response) {
+        var str = '';
+        response.on('data', function (chunk) {
+          str += chunk;
+        });
+
+        response.on('end', function () {
+          var doc = new DOMParser().parseFromString(str);  
+          // find srs if set by using xpath
+          var srs = xpath.select('//@srsName', doc);
+
+          if (srs.length > 0)
+            srsName = srs[0].value;
+
+          var rssFormat = new OpenLayers.Format.GeoRSS({
+            // don't care about namespaces except georss for now
+            // TODO this is a 'feature' in XMLDom and OpenLayers GeoRSS parser
+            getElementsByTagNameNS : function(node, uri, name)
+            {
+              if ((uri == this.georssns) ||(uri == this.geons))
+                return node.getElementsByTagNameNS(uri, name);
+              else
+                return node.getElementsByTagName(name);
+            }
+          });
+          var features = rssFormat.read(doc);
+          gpkg.createOLGeoPackage(features, typeName, srsName, cb);
+        });
+      }
+      var typeName = url.substring(url.lastIndexOf("/") + 1);
+      if (typeName.indexOf('.') != -1)
+        typeName = typeName.substring(0, typeName.indexOf('.'));
+
+      http.request(url, callback).end();
+      break;
+    default:
+      console.log('Unrecognised type: ' + type);
+      cb('Unrecognised type: ' + type);
   }
 };
 
@@ -401,11 +412,7 @@ GeoPackage.prototype.load = function load(ctx, entries, cb)
                   }
                 }
             };
-          
-            tmp.dir(function _tempDirCreated(e, dirpath) {
-              if (e) cb(e);
-              gpkg.dbLoad(f.owcLink, dirpath, entryCb);
-            });
+            gpkg.dbLoad(f.owcLink, entryCb);
           });
           }
         });
