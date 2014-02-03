@@ -1,54 +1,54 @@
 doctype xml
 Capabilities(xmlns:xlink="http://www.w3.org/1999/xlink", xmlns:wps="http://www.opengis.net/wps/1.0.0", xmlns:ows="http://www.opengis.net/ows/1.0", xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance", service="WPS", version="1.0.0", updateSequence="1", xmlns:lang="en", xsi:schemaLocation="http://www.opengis.net/wps/1.0.0 ../wpsGetCapabilities_response.xsd")
-    ows:serviceIdentification
-        ows:Title #{identification.title}
-        ows:Abstract #{identification.abstract}
-        ows:Keywords 
-        for keyword in identification.keywords
-            ows:Keyword #{keyword}
-        ows:ServiceType #{identification.type}
-        for version in identification.versions
-            ows:ServiceTypeVersion #{version}
-        ows:Fees #{identification.fees}
-        ows:AccessConstraints #{identification.accessConstraints}
-    ows:ServiceProvider
-        ows:ProviderName #{provider.name}
-        ows:ProviderSite(xmlns:xlink="#{provider.site}")
-        ows:ServiceContact
-          ows:IndividualName #{provider.contact.name}
-          ows:PositionName #{provider.contact.position}
-          ows:ContactInfo
-              ows:Phone 
-                  ows:Voice #{provider.contact.voice}
-                  ows:Facsimile #{provider.contact.fax}
-              ows:Address
-                  ows:DeliveryPoint #{provider.contact.delivery}
-                  ows:City #{provider.contact.city}
-                  ows:AdministrativeArea #{provider.contact.adminArea}
-                  ows:PostalCode #{provider.contact.postalCode}
-                  ows:Country #{provider.contact.country}
-                  ows:ElectronicMailAddress #{provider.contact.email}
-    ows:OperationsMetadata
+  ows:serviceIdentification
+    ows:Title #{identification.title}
+    ows:Abstract #{identification.abstract}
+    ows:Keywords 
+    for keyword in identification.keywords
+      ows:Keyword #{keyword}
+    ows:ServiceType #{identification.type}
+    for version in identification.versions
+      ows:ServiceTypeVersion #{version}
+    ows:Fees #{identification.fees}
+    ows:AccessConstraints #{identification.accessConstraints}
+  ows:ServiceProvider
+    ows:ProviderName #{provider.name}
+    ows:ProviderSite(xmlns:xlink="#{provider.site}")
+    ows:ServiceContact
+      ows:IndividualName #{provider.contact.name}
+      ows:PositionName #{provider.contact.position}
+      ows:ContactInfo
+        ows:Phone 
+          ows:Voice #{provider.contact.voice}
+          ows:Facsimile #{provider.contact.fax}
+        ows:Address
+          ows:DeliveryPoint #{provider.contact.delivery}
+          ows:City #{provider.contact.city}
+          ows:AdministrativeArea #{provider.contact.adminArea}
+          ows:PostalCode #{provider.contact.postalCode}
+          ows:Country #{provider.contact.country}
+          ows:ElectronicMailAddress #{provider.contact.email}
+  ows:OperationsMetadata
     for op in operations
-        ows:Operation(name="#{op.name}")
-            ows:DCP
-            ows:HTTP
-            if (op.get)
-                ows:Get(xlink:href="#{op.get}")
-            if (op.post)
-                ows:Post(xlink:href="#{op.post}")                 
-    wps:ProcessOfferings
+      ows:Operation(name="#{op.name}")
+        ows:DCP
+        ows:HTTP
+        if (op.get)
+          ows:Get(xlink:href="#{op.get}")
+        if (op.post)
+          ows:Post(xlink:href="#{op.post}")                 
+  wps:ProcessOfferings
     for offering in processes
-        wps:Process(wps:processVersion="#{offering.version}")
-        ows:Identifier #{offering.id}
-        ows:Title #{offering.title}
-        ows:Abstract #{offering.abstract}
-        for meta in offering.metadata
-           ows:Metadata(xlink:title="#{meta}")
-    wps:Languages
-        wps:Default
-            ows:Language #{languages.default}
-        if (languages.supported)
-            wps:Supported
-            for lang in languages.supported
-                ows:Language #{lang}
+      wps:Process(wps:processVersion="#{offering.version}")
+      ows:Identifier #{offering.id}
+      ows:Title #{offering.title}
+      ows:Abstract #{offering.abstract}
+      for meta in offering.metadata
+         ows:Metadata(xlink:title="#{meta}")
+  wps:Languages
+    wps:Default
+      ows:Language #{languages.default}
+    if (languages.supported)
+      wps:Supported
+      for lang in languages.supported
+        ows:Language #{lang}

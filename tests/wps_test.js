@@ -1,7 +1,7 @@
-"use strict";
+'use strict';
 
-var wps = require("../src/wps.js");
-var fs = require("fs");
+var wps = require('../src/wps.js');
+var fs = require('fs');
 var OpenLayers = require('openlayers').OpenLayers;
 
 /*
@@ -35,89 +35,89 @@ module.exports = {
   },
   testCapabilities: function(test) {
     var cap = wps.getCapabilities();
-    test.equal(typeof cap, "string");
+    test.equal(typeof cap, 'string');
     test.done();
   },
 
   testDescribeProcess: function(test) {
     var desc = wps.describeProcess();
-    test.equal(typeof desc, "string");
+    test.equal(typeof desc, 'string');
     test.done();
   },
 
   testExecuteProcess: function(test) {
     var ex = [];
-    var data = fs.readFileSync("samples/execute.xml", "utf8")
+    var data = fs.readFileSync('samples/execute.xml', 'utf8');
     var resp = wps.parseReqBody(ex, data); 
     test.equal(ex.length, 0);
-    test.equal(resp.entries.length, 3, "Unable to parse entries");
+    test.equal(resp.entries.length, 3, 'Unable to parse entries');
 
-    wps.execute(resp.ctx, resp.entries, 
-      function(err) {
+    wps.execute(resp.ctx, resp.entries, function(e, dbFile) {
+      if (e) {
         // no error
         test.equal(undefined, err);
         test.done();
-      },
-      function(dbFile) {
-        test.equal("string", typeof dbFile);
+      }
+      else {
+        test.equal('string', typeof dbFile);
         fs.unlink(dbFile);
         test.done();
-      } 
-    );
+      }
+    });
   },
 
-  testExecuteWFSProcess: function(test){
+  testExecuteWFSProcess: function(test) {
     var ex = [];
-    var data = fs.readFileSync("samples/wfs_execute.xml", "utf8")
+    var data = fs.readFileSync('samples/wfs_execute.xml', 'utf8');
     var resp = wps.parseReqBody(ex, data); 
 
     test.equal(ex.length, 0);
-    test.equal(resp.entries.length, 1, "Unable to parse entries");
+    test.equal(resp.entries.length, 1, 'Unable to parse entries');
 
-    wps.execute(resp.ctx, resp.entries, 
-      function(err) {
+    wps.execute(resp.ctx, resp.entries, function(e, dbFile) {
+      if (e) {
         // no error
         test.equal(undefined, err);
         test.done();
-      },
-      function(dbFile) {
-        test.equal("string", typeof dbFile);
+      }
+      else {
+        test.equal('string', typeof dbFile);
         fs.unlink(dbFile);
         test.done();
-      } 
-    );    
+      }
+    });    
   },
 
-  testExecuteGeoRSSProcess: function(test){
+  testExecuteGeoRSSProcess: function(test) {
     var ex = [];
-    var data = fs.readFileSync("samples/georss_execute.xml", "utf8")
+    var data = fs.readFileSync('samples/georss_execute.xml', 'utf8')
     var resp = wps.parseReqBody(ex, data); 
 
     test.equal(ex.length, 0);
-    test.equal(resp.entries.length, 1, "Unable to parse entries");
+    test.equal(resp.entries.length, 1, 'Unable to parse entries');
 
-    wps.execute(resp.ctx, resp.entries, 
-      function(err) {
+    wps.execute(resp.ctx, resp.entries, function(e, dbFile) {
+      if (e) {
         // no error
         test.equal(undefined, err);
         test.done();
-      },
-      function(dbFile) {
-        test.equal("string", typeof dbFile);
+      }
+      else {
+        test.equal('string', typeof dbFile);
         fs.unlink(dbFile);
         test.done();
-      } 
-    );    
+      }
+    });    
   },
 
-  testErrorMsg: function(test){
+  testErrorMsg: function(test) {
     var errMsg = wps.getError({
       exceptions: [{
         exceptionCode: "MissingParameterValue",
         locator: "request"
       }]
     });
-    test.equal(typeof errMsg, "string");
+    test.equal(typeof errMsg, 'string');
     test.done();
   }
 };
