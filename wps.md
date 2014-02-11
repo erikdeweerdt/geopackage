@@ -24,6 +24,7 @@ Execute from the root directory
 `curl "http://localhost:1337/wps?request=describeprocess&version=1.0.0&service=wps"`
 `curl -d @samples/execute.xml http://localhost:1337/wps > shapefile.gpkg`
 `curl -d @samples/wfs_execute.xml http://localhost:1337/wps > wfs.gpkg`
+`curl -d @samples/georss_execute.xml http://localhost:1337/wps > georss.gpkg`
 
 
 
