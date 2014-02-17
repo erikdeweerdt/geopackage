@@ -3,7 +3,7 @@
   <ows:Identifier>geopackage</ows:Identifier>
   <wps:DataInputs>
     <wps:Input>
-      <ows:Identifier>owsContext</ows:Identifier>
+      <ows:Identifier>OWSContext</ows:Identifier>
       <wps:Data>
         <wps:ComplexData mimeType="text/xml">
           <![CDATA[<?xml version="1.0" encoding="ISO-8859-1" standalone="no"?>

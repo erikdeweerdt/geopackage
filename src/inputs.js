@@ -45,7 +45,7 @@
 		"profile" : "urn:ogc:wps:1.0.0:geopackage",
 		"inputs" : [
 		    {
-		    	"id" : "owsContext",
+		    	"id" : "OWSContext",
 		    	"title" : "OWS Context Document used to specifiy geopackage",
 		    	"abstract" : "Body of request is the OWS Context document",
 		    	"minOccurs": 1,
