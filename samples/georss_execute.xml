@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<wps:Execute version="1.0.0" service="WPS" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.opengis.net/wps/1.0.0" xmlns:wfs="http://www.opengis.net/wfs" xmlns:wps="http://www.opengis.net/wps/1.0.0" xmlns:ows="http://www.opengis.net/ows/1.1" xmlns:gml="http://www.opengis.net/gml" xmlns:ogc="http://www.opengis.net/ogc" xmlns:wcs="http://www.opengis.net/wcs/1.1.1" xmlns:xlink="http://www.w3.org/1999/xlink" xsi:schemaLocation="http://www.opengis.net/wps/1.0.0 http://schemas.opengis.net/wps/1.0.0/wpsAll.xsd">
+  <ows:Identifier>geopackage</ows:Identifier>
+  <wps:DataInputs>
+    <wps:Input>
+      <ows:Identifier>owsContext</ows:Identifier>
+      <wps:Data>
+        <wps:ComplexData mimeType="text/xml">
+          <![CDATA[<?xml version="1.0" encoding="ISO-8859-1" standalone="no"?>
+          <feed xmlns="http://www.w3.org/2005/Atom" 
+            xmlns:dc="http://purl.org/dc/elements/1.1/" 
+            xmlns:georss="http://www.georss.org/georss" 
+            xmlns:gml="http://www.opengis.net/gml" 
+            xmlns:owc="http://www.opengis.net/owc/1.0" 
+            xml:lang="en">
+            <link rel="profile"
+              href="http://www.opengis.net/spec/owc-atom/1.0/req/core"
+              title="This file is compliant with version 1.0 of OGC Context"/>
+            <id>http://www.opengis.net/owc/1.0/examples/geotiff</id>
+            <title>GeoRSS</title>
+            <author>
+              <name>Norman Barker</name>
+            </author>
+            <updated>2013-12-10T17:26:23Z</updated>
+            <georss:where>
+              <gml:Envelope srsName="EPSG:4326" srsDimension="2">
+                <gml:lowerCorner>-180 -90</gml:lowerCorner>
+                <gml:upperCorner>180 90</gml:upperCorner>
+              </gml:Envelope>
+            </georss:where>
+            <entry>
+              <id>http://openlayers.org/dev/examples/georss.xml</id>
+              <title>http://openlayers.org/dev/examples/georss.xml</title>
+              <updated>2013-12-10T17:26:23Z</updated>
+              <dc:publisher>OGC</dc:publisher>
+              <content type="text">http://openlayers.org/dev/examples/georss.xml</content>
+              <owc:offering code="http://www.opengis.net/spec/owc-atom/1.0/req/georss">
+                <owc:content type="application/rss+xml" href="http://openlayers.org/dev/examples/georss.xml"/>
+              </owc:offering>
+            </entry>
+          </feed>]]>
+        </wps:ComplexData>
+      </wps:Data>
+    </wps:Input>
+  </wps:DataInputs>
+  <wps:ResponseForm>
+    <wps:RawDataOutput mimeType="application/vnd.ogc.gpkg">
+      <ows:Identifier>geopackage</ows:Identifier>
+    </wps:RawDataOutput>
+  </wps:ResponseForm>
+</wps:Execute>
+
