@@ -39,6 +39,11 @@ GeoPackage.prototype.createOLGeoPackage =
                   function createOLGeoPackage(features, name, srsName, cb) {
   var wktFormat = new OpenLayers.Format.WKT();
   var createdTable = false;
+  
+  // srs id 
+  var srsId = parseInt(srsName.substring(srsName.lastIndexOf(":") + 1));
+  if (srsId == NaN)
+    srsId = -1;
 
   for (var i = 0; i < features.length; i++) {
     var values = [];
@@ -52,7 +57,7 @@ GeoPackage.prototype.createOLGeoPackage =
       for (var col in feature.attributes)
         if (feature.attributes.hasOwnProperty(col))
           cols.push(col);
-      this.createTable(name, cols, geomType, cb);
+      this.createTable(name, cols, geomType, srsId, cb);
       createdTable = true;
     }
 
@@ -65,13 +70,13 @@ GeoPackage.prototype.createOLGeoPackage =
   }
 
   if (createdTable)
-    this.finishTable(name, "features", geomType, srsName, cb);
+    this.finishTable(name, "features", geomType, srsId, cb);
   else
     cb('Table ' + name + ' not created');
 };
 
 GeoPackage.prototype.createTable = 
-                                function createTable(name, cols, geomType, cb) {
+                                function createTable(name, cols, geomType, srsId, cb) {
   // create the table based on the feature properties
   var sql = 'CREATE TABLE ' + name + ' (';
   var db = this.db;
@@ -84,14 +89,14 @@ GeoPackage.prototype.createTable =
     var sqlType;
     switch(typeof col) {
       case 'string':
-        sqlType = 'STRING';
+        sqlType = 'TEXT';
         break;
       case 'boolean':
       case 'number':
         sqlType = 'INTEGER';
         break;
       default:
-        sqlType = 'STRING';
+        sqlType = 'TEXT';
     }
     sql = sql + ' ' + col + ' ' + sqlType + ',';
   }
@@ -104,7 +109,7 @@ GeoPackage.prototype.createTable =
     });
     createdTable = true;
     // for now don't worry about projections
-    db.run('SELECT AddGeometryColumn("' + name + '", "geom", "' + geomType + '", 0, 0, 0)',
+    db.run('SELECT AddGeometryColumn("' + name + '", "geom", "' + geomType + '", ' + srsId + ', 0, 0)',
       function(e) {
         if (e)
           cb(e);
@@ -139,7 +144,7 @@ GeoPackage.prototype.insertRow = function insertRow(tableName, values, cb) {
 }
 
 GeoPackage.prototype.finishTable = 
-        function finishTable(tableName, dataType, geomType, srsName, cb)
+        function finishTable(tableName, dataType, geomType, srsId, cb)
 {
   // update gpkg_contents tables
   var db = this.db;
@@ -156,10 +161,6 @@ GeoPackage.prototype.finishTable =
       else {
         var sqlContents = 'INSERT INTO gpkg_contents ' +
           'VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
-        // srs id 
-        var srsId = parseInt(srsName.substring(srsName.lastIndexOf(":") + 1));
-        if (srsId == NaN)
-          srsId = -1;
 
         db.run(sqlContents, tableName, dataType, tableName, "", 
                   new Date().toString(), r.minx, r.miny, r.maxx, r.maxy, srsId);
@@ -368,7 +369,7 @@ GeoPackage.prototype.load = function load(ctx, entries, cb)
 
   this.db.loadExtension('/usr/local/lib/libgpkg.sqlext', function(e) {
     if (e)
-      cb(err)
+      cb(e)
     else
     {
       var results = [];
