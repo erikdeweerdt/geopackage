@@ -1,6 +1,7 @@
 var jade = require('jade');
 var fs = require('fs');
 var DOMParser = require('xmldom').DOMParser;
+var XMLSerializer = require('xmldom').XMLSerializer;
 var OpenLayers = require('openlayers').OpenLayers;
 var GeoPackage = require('../src/GeoPackage');
 var tmp = require('tmp');
@@ -48,10 +49,10 @@ module.exports = {
     var rss = xmlFormat.getElementsByTagNameNS(doc, wpsNS, 'ComplexData');
     if ((rss.length == 1) && (rss.item(0).hasChildNodes())) {
       var child = rss.item(0).firstChild;
-      while (child) {
-        if (child.nodeType == 4) {
-          //cdata
-          var rssDoc = new DOMParser().parseFromString(child.nodeValue);
+      while (child) {  
+        if (child.nodeType == 1) { 
+          var str = new XMLSerializer().serializeToString(child);
+          var rssDoc = new DOMParser().parseFromString(str);
           var rssFormat = new OpenLayers.Format.GeoRSS({
             // don't care about namespaces for now
             // TODO this is a 'feature' in XMLDom and OpenLayers GeoRSS parser
@@ -63,6 +64,7 @@ module.exports = {
               var entry = 
                 OpenLayers.Format.GeoRSS.prototype.createFeatureFromItem.apply(
                   this, arguments);
+              entry.params = {};
 
               // get owc:offering/owc:content
               var child = item.firstChild;
@@ -78,7 +80,7 @@ module.exports = {
                       break;
                     }
                     else if (c2.localName == 'operation') {
-                      // wfs / wms
+                      // wfs / wmts
                       var obj = {
                         "link" : c2.getAttribute('href'),
                         "type" : c2.getAttribute('code'),
@@ -89,6 +91,25 @@ module.exports = {
                         entry.owcLink.push(obj);
                       else
                         entry.owcLink = [obj];
+                    }
+                    else if (c2.localName == 'parameters') {
+                      var c3 = c2.firstChild;
+                      while (c3){
+                        if (c3.localName == 'parameter') {
+                          var name = c3.getAttribute('name');
+                          name = name.charAt(0).toLowerCase() + name.slice(1);
+
+                          if (name == 'tileMatrix') {
+                            entry.params.tileMatrix = {
+                              "from" : parseInt(c3.getAttribute('from')),
+                              "to" : parseInt(c3.getAttribute('to'))
+                            }
+                          }
+                          else
+                            entry.params[name] = c3.getAttribute('value');
+                        }
+                        c3 = c3.nextSibling;
+                      }
                     }
                     c2 = c2.nextSibling;
                   }

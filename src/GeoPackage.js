@@ -108,7 +108,6 @@ GeoPackage.prototype.createTable =
         cb(e);
     });
     createdTable = true;
-    // for now don't worry about projections
     db.run('SELECT AddGeometryColumn("' + name + '", "geom", "' + geomType + '", ' + srsId + ', 0, 0)',
       function(e) {
         if (e)
@@ -170,43 +169,70 @@ GeoPackage.prototype.finishTable =
   }); 
 }
 
-GeoPackage.prototype.dbLoad = function dbLoad(owcLink, cb) {
+GeoPackage.prototype.dbLoad = function dbLoad(owcLink, params, cb) {
   var gpkg = this;
   var db = this.db;
   var type;
   var url;
+  var queryData;
+  var capabilities;
   var typeName;
+  var layerName;
   var typeNamePrefix;
-  var srsName = 'urn:x-ogc:def:crs:EPSG:4326';
+  var tileMatrixSet;
+  var levels = [];
+  var srsId = 4326;
 
   if (Array.isArray(owcLink)) {
     for (var i = 0; i < owcLink.length; i++) {
-      // all we care about is getfeature and getmap
+      // all we care about is getfeature and gettile
       var l = owcLink[i];
       switch(l.type.toLowerCase()) {
         case 'getfeature':
           url = l.link;
           type = 'wfs';
-          // extract the typename for the filename
-          var queryData = urlparser.parse(url, true).query;
+          queryData = urlparser.parse(url, true).query;
           // change the queryData properties to lowercase
           for (var col in queryData.properties)
-            if (queryData.properties.hasOwnProperty(col))
-              queryData[col.toLowerCase()] = queryData[col];
-
+            if (queryData.properties.hasOwnProperty(col)) {
+              var val = queryData[col];
+              delete queryData[col];
+              queryData[col.toLowerCase()] = val;
+            }
           // short cut to get typename and NS
           var s = queryData.typename.split(':');
           typeNamePrefix = s[0];
           typeName = s[1];
           break;
+        case 'gettile':
+          url = l.link;
+          type = 'wmts';
+          // get format, layer, tilematrixset
+          tileMatrixSet = params.tileMatrixSet;
+          layerName = params.layerName;
+          for (var i = params.tileMatrix.from; i < params.tileMatrix.to; i++)
+            levels.push(tileMatrixSet + ':' + i.toString());
+          
+          url = urlparser.parse(url, true);
+          queryData = url.query;
+          // change the queryData properties to lowercase
+          for (var col in queryData.properties)
+            if (queryData.properties.hasOwnProperty(col)) {
+              var val = queryData[col];
+              delete queryData[col];
+              queryData[col.toLowerCase()] = val;
+            }
+          delete url['search'];
+          break;
         case 'getcapabilities':
+          capabilities = l.link;
           break;
         default:
           console.log('Unrecognised type: ' + l.type);
           cb(null);
       }
 
-      if (typeName)
+      if (typeName || (layerName && capabilities))
         break;
     }
   }
@@ -251,6 +277,8 @@ GeoPackage.prototype.dbLoad = function dbLoad(owcLink, cb) {
                     {
                       // move properties into an array
                       var cols = [];
+                      var srsName = 'urn:x-ogc:def:crs:EPSG:4326';
+
                       for (var col in feature.properties)
                         if (feature.properties.hasOwnProperty(col))
                           cols.push(col);
@@ -262,7 +290,12 @@ GeoPackage.prototype.dbLoad = function dbLoad(owcLink, cb) {
                             feature.properties.crs.properties.name)
                         srsName = feature.properties.crs.properties.name;
 
-                      gpkg.createTable(typeName, cols, geomType, cb);
+                      // srs id 
+                      var srsId = parseInt(srsName.substring(srsName.lastIndexOf(":") + 1));
+                      if (srsId == NaN)
+                        srsId = -1;
+
+                      gpkg.createTable(typeName, cols, geomType, srsId, cb);
                       createdTable = true;
                     }
 
@@ -280,7 +313,7 @@ GeoPackage.prototype.dbLoad = function dbLoad(owcLink, cb) {
                 .on('end', function() {
                   rmdir(destPath, function(e){});
                   gpkg.finishTable(typeName, 'features', geomType, 
-                    srsName, cb);
+                    srsId, cb);
                   rmdir(destPath, function(e){});
                 });
                 break;
@@ -348,12 +381,86 @@ GeoPackage.prototype.dbLoad = function dbLoad(owcLink, cb) {
           var features = rssFormat.read(doc);
           gpkg.createOLGeoPackage(features, typeName, srsName, cb);
         });
-      }
+      };
       var typeName = url.substring(url.lastIndexOf("/") + 1);
       if (typeName.indexOf('.') != -1)
         typeName = typeName.substring(0, typeName.indexOf('.'));
 
       http.request(url, callback).end();
+      break;
+    case 'wmts':
+      callback = function(response) {
+        var str = '';
+        response.on('data', function (chunk) {
+          str += chunk;
+        });
+
+        response.on('end', function () {
+          var doc = new DOMParser().parseFromString(str);  
+          // parse min, max
+
+          db.serialize(function() {
+            db.run('SELECT CreateTilesTable("' + layerName + '")'); 
+            // id, zoom_level, tile_column, tile_row, tile_data
+            // fetch tiles
+            var lyr = xpath.select('//Layer/*[local-name() = "Title" and text() = "' + layerName +'"]', doc);
+
+            if (lyr.length > 0) {
+              var nLevels = levels.length;
+              lyr = lyr[0];
+              var cntr = 0;
+              levels.forEach(function(l) {
+                    // can now parse min, max rows, cols
+                    var limits = xpath.select('//TileMatrixLimits/*[local-name() = "TileMatrix" and text() = "' + l +'"]/..', lyr);
+                    if (limits.length > 0) {
+                      limits = limits[0];
+                      queryData.tilematrix=l;
+                      // get min/max row and column
+                      var minRow = parseInt(xpath.select('MinTileRow', limits)[0].firstChild.data);
+                      var maxRow = parseInt(xpath.select('MaxTileRow', limits)[0].firstChild.data);
+                      var minCol = parseInt(xpath.select('MinTileCol', limits)[0].firstChild.data);
+                      var maxCol = parseInt(xpath.select('MaxTileCol', limits)[0].firstChild.data);
+
+                      for (var i = minRow; i <= maxRow; i++) {
+                        url.query.tilerow = i;
+                        for (var j = minCol; j <= maxCol; j++) {
+                          url.query.tilecol = j;
+                          var req = urlparser.format(url);
+                          var data = '';
+                          console.log(unescape(req));
+                          http.get(req, function(res) {
+                            var contentType = res.headers['content-type'];
+                            console.log(res.statusCode);
+                            // if (res.statusCode == 200) {
+                              res.on('data', function(chunk) {
+                                data += chunk;
+                              })
+                              res.on('end', function() {
+                                console.log(data);
+                                if (++cntr == nLevels)
+                                  cb(null, null);
+                              })
+                            // }
+                            // else
+                            //  cb(null, null);
+                          })
+                          .on('error', function(e) {
+                            cb(e, null);
+                          });
+                        }
+                      }
+                    }
+                    else 
+                      cb("Unable to find tile layer limits: " + layerName, null);
+              });            
+            }
+            else
+              cb("Unable to find layer: " + layerName, null);
+          });
+        });
+      };
+
+      http.request(capabilities, callback).end();
       break;
     default:
       console.log('Unrecognised type: ' + type);
@@ -413,7 +520,7 @@ GeoPackage.prototype.load = function load(ctx, entries, cb)
                   }
                 }
             };
-            gpkg.dbLoad(f.owcLink, entryCb);
+            gpkg.dbLoad(f.owcLink, f.params, entryCb);
           });
           }
         });

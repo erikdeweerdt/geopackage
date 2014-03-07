@@ -110,6 +110,28 @@ module.exports = {
     });    
   },
 
+  testExecuteWMTSProcess: function(test) {
+    var ex = [];
+    var data = fs.readFileSync('samples/wmts_execute.xml', 'utf8')
+    var resp = wps.parseReqBody(ex, data); 
+
+    test.equal(ex.length, 0);
+    test.equal(resp.entries.length, 1, 'Unable to parse entries');
+
+    wps.execute(resp.ctx, resp.entries, function(e, dbFile) {
+      if (e) {
+        // no error
+        test.equal(undefined, e);
+        test.done();
+      }
+      else {
+        test.equal('string', typeof dbFile);
+        fs.unlink(dbFile);
+        test.done();
+      }
+    });    
+  },
+
   testErrorMsg: function(test) {
     var errMsg = wps.getError({
       exceptions: [{

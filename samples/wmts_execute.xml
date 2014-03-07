@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<wps:Execute version="1.0.0" service="WPS" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.opengis.net/wps/1.0.0" xmlns:wfs="http://www.opengis.net/wfs" xmlns:wps="http://www.opengis.net/wps/1.0.0" xmlns:ows="http://www.opengis.net/ows/1.1" xmlns:gml="http://www.opengis.net/gml" xmlns:ogc="http://www.opengis.net/ogc" xmlns:wcs="http://www.opengis.net/wcs/1.1.1" xmlns:xlink="http://www.w3.org/1999/xlink" xsi:schemaLocation="http://www.opengis.net/wps/1.0.0 http://schemas.opengis.net/wps/1.0.0/wpsAll.xsd">
+  <ows:Identifier>geopackage</ows:Identifier>
+  <wps:DataInputs>
+    <wps:Input>
+      <ows:Identifier>OWSContext</ows:Identifier>
+      <wps:Data>
+        <wps:ComplexData mimeType="text/xml">
+            <feed xmlns="http://www.w3.org/2005/Atom" 
+                xmlns:dc="http://purl.org/dc/elements/1.1/" 
+                xmlns:georss="http://www.georss.org/georss" 
+                xmlns:gml="http://www.opengis.net/gml" 
+                xmlns:owc="http://www.opengis.net/owc/1.0" 
+                xml:lang="en">
+                <category scheme="http://www.opengis.net/spec/owc/specReference" term="http://www.opengis.net/spec/owc/1.0/req/atom" label="This file is compliant with version 1.0 of OGC Context"/>
+                <title>Sample WFS</title>
+                <id>http://www2.dmsolutions.ca/cgi-bin/mswfs_gmap?version=1.0.0&amp;request=getcapabilities&amp;service=wfs?/</id>
+                <author>
+                    <name>Joe Bloggs</name>
+                </author>
+                <updated>2012-02-03T12:00:30Z</updated>
+                <dc:publisher></dc:publisher>
+                <entry>
+                    <id>http://v2.suite.opengeo.org/geoserver/gwc/service/wmts?request=GetCapabilities&amp;service=WMTS</id>
+                    <title>Test</title>
+                    <dc:publisher>OpenGeo</dc:publisher>
+                    <updated>2012-02-03T12:00:30Z</updated>
+                    <dc:rights>Fee: / Contraints:</dc:rights>
+                    <georss:where>
+                        <gml:Polygon>
+                            <gml:exterior>
+                                <gml:LinearRing>
+                                    <gml:posList>-90 -180 -90 180 90 180 90 -180 -90 -180</gml:posList>
+                                </gml:LinearRing>
+                            </gml:exterior>
+                        </gml:Polygon>
+                    </georss:where>
+                    <link rel="enclosure" type="text/xml" title="WMTS output" href="http://v2.suite.opengeo.org/geoserver/gwc/service/wmts?request=GetCapabilities&amp;service=WMTS"/>
+                    <content type="text"/>
+                    <owc:offering code="http://www.opengis.net/spec/owc-atom/1.0/req/wmts">
+                        <owc:operation code="GetCapabilities" method="GET" type="application/xml"
+                            href="http://v2.suite.opengeo.org/geoserver/gwc/service/wmts?request=GetCapabilities&amp;service=WMTS"/>
+                        <owc:operation code="GetTile" method="GET" type="image/jpeg"
+                            href="http://v2.suite.opengeo.org/geoserver/gwc/service/wmts?request=GetTile&amp;service=WMTS&amp;version=1.0.0&amp;format=image/png&amp;layer=world&amp;TileMatrixSet=EPSG:4326"/>
+                        <testbed:parameters xmlns:testbed="http://schemas.compusult.net/ows10/ows-context">
+                            <testbed:parameter name="LayerName" value="world"/>
+                            <testbed:parameter name="TileMatrixSet" value="EPSG:4326"/>
+                            <testbed:parameter name="TileMatrix" from="3" to="5"/>
+                        </testbed:parameters>
+                    </owc:offering>
+                </entry>
+            </feed>
+        </wps:ComplexData>
+      </wps:Data>
+    </wps:Input>
+  </wps:DataInputs>
+  <wps:ResponseForm>
+    <wps:RawDataOutput mimeType="application/vnd.ogc.gpkg">
+      <ows:Identifier>geopackage</ows:Identifier>
+    </wps:RawDataOutput>
+  </wps:ResponseForm>
+</wps:Execute>

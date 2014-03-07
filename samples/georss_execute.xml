@@ -6,7 +6,6 @@
       <ows:Identifier>OWSContext</ows:Identifier>
       <wps:Data>
         <wps:ComplexData mimeType="text/xml">
-          <![CDATA[<?xml version="1.0" encoding="ISO-8859-1" standalone="no"?>
           <feed xmlns="http://www.w3.org/2005/Atom" 
             xmlns:dc="http://purl.org/dc/elements/1.1/" 
             xmlns:georss="http://www.georss.org/georss" 
@@ -38,7 +37,7 @@
                 <owc:content type="application/rss+xml" href="http://openlayers.org/dev/examples/georss.xml"/>
               </owc:offering>
             </entry>
-          </feed>]]>
+          </feed>
         </wps:ComplexData>
       </wps:Data>
     </wps:Input>
