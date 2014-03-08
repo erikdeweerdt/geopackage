@@ -362,8 +362,8 @@ GeoPackage.prototype.dbLoad = function dbLoad(owcLink, params, cb) {
         response.on('end', function () {
           var doc = new DOMParser().parseFromString(str);  
           // find srs if set by using xpath
+          var srsName = 'urn:x-ogc:def:crs:EPSG:4326';
           var srs = xpath.select('//@srsName', doc);
-
           if (srs.length > 0)
             srsName = srs[0].value;
 
