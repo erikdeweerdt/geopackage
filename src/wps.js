@@ -3,13 +3,13 @@ var fs = require('fs');
 var DOMParser = require('xmldom').DOMParser;
 var XMLSerializer = require('xmldom').XMLSerializer;
 var OpenLayers = require('openlayers').OpenLayers;
-var GeoPackage = require('../src/GeoPackage');
+var GeoPackage = require(process.env.WPS_HOME + '/src/GeoPackage');
 var tmp = require('tmp');
 
-var capTemplate = jade.compile(fs.readFileSync('src/wpsCapabilities.jade', 'utf8'));
-var descTemplate = jade.compile(fs.readFileSync('src/wpsDescribeProcess.jade', 'utf8'));
-var errorTemplate = jade.compile(fs.readFileSync('src/wpsError.jade', 'utf8'));
-var owsParams = JSON.parse(fs.readFileSync('src/inputs.js', 'utf8'));
+var capTemplate = jade.compile(fs.readFileSync(process.env.WPS_HOME + '/src/wpsCapabilities.jade', 'utf8'));
+var descTemplate = jade.compile(fs.readFileSync(process.env.WPS_HOME + '/src/wpsDescribeProcess.jade', 'utf8'));
+var errorTemplate = jade.compile(fs.readFileSync(process.env.WPS_HOME + '/src/wpsError.jade', 'utf8'));
+var owsParams = JSON.parse(fs.readFileSync(process.env.WPS_HOME + '/src/inputs.js', 'utf8'));
 var wpsNS = 'http://www.opengis.net/wps/1.0.0';
 
 module.exports = {
