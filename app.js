@@ -1,6 +1,10 @@
+if(!process.env.WPS_HOME){
+   process.env['WPS_HOME']= process.cwd()
+}
 var express = require('express');
 var fs = require('fs');
-var wps =  require('./src/wps');
+var wps =  require(process.env.WPS_HOME + '/src/wps');
+
 var app = express();
 
 app.use(function(req, res, next) {
